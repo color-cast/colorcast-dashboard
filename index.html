@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>CC Studio Room</title>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="CC Studio"/>
+<meta name="theme-color" content="#0f1117"/>
+<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;CC Studio Room&quot;,&quot;short_name&quot;:&quot;Studio&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#0f1117&quot;,&quot;theme_color&quot;:&quot;#0f1117&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;https://pharmacycondomwala.in/wp-content/uploads/2026/04/logo-scaled.png&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/png&quot;}]}"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#0f1117;--card:#1a1d27;--card2:#21253a;
+  --teal:#2cffd0;--teal2:#0fb89a;
+  --teal-dim:rgba(44,255,208,0.08);--teal-glow:rgba(44,255,208,0.2);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,0.08);
+  --text:#fff;--text2:#8a8fa8;--text3:#4a4f6a;
+  --red:#ff5c7a;--yellow:#ffd166;--blue:#60a5fa;--orange:#fb923c;--green:#4ade80;
+  --border:rgba(255,255,255,0.06);--radius:22px;--radius-sm:14px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse at 70% 0%,rgba(167,139,250,0.06),transparent 50%),
+             radial-gradient(ellipse at 20% 90%,rgba(44,255,208,0.04),transparent 50%);
+  pointer-events:none;z-index:0;}
+
+/* ── LAYOUT ── */
+.app{position:relative;z-index:1;max-width:430px;margin:0 auto;min-height:100vh;padding-bottom:100px;}
+.page{display:none;}
+.page.active{display:block;}
+
+/* ── HEADER ── */
+.header{padding:50px 22px 16px;display:flex;align-items:flex-start;justify-content:space-between;}
+.greeting{font-size:12px;color:var(--text2);margin-bottom:3px;}
+.greeting span{color:var(--purple);font-weight:600;}
+.header-title{font-size:24px;font-weight:800;letter-spacing:-0.5px;}
+.header-sub{font-size:11px;color:var(--text2);margin-top:2px;}
+
+/* ── CONN BAR ── */
+.conn-bar{margin:0 20px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 14px;display:flex;align-items:center;gap:9px;}
+.conn-bar-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:all 0.3s;}
+.conn-bar-dot.on{background:var(--teal);box-shadow:0 0 7px var(--teal);animation:dotpulse 2s infinite;}
+.conn-bar-text{font-size:11px;font-weight:500;color:var(--text2);}
+.conn-bar-text span{color:var(--teal);font-weight:600;}
+.conn-time{margin-left:auto;font-size:10px;color:var(--text3);font-weight:500;}
+@keyframes dotpulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+
+/* ── SENSOR CARD ── */
+.sensor-card{margin:0 20px 16px;background:linear-gradient(135deg,#1a1428,#0f1020);border:1px solid rgba(167,139,250,0.15);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden;}
+.sensor-card::before{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:radial-gradient(circle,rgba(167,139,250,0.1),transparent 70%);pointer-events:none;}
+.sensor-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.sensor-badge{background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.22);border-radius:9px;padding:5px 11px;font-size:10px;font-weight:700;color:var(--purple);letter-spacing:1px;text-transform:uppercase;}
+.sensor-conn{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text3);}
+.sensor-conn-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);}
+.sensor-conn-dot.on{background:var(--teal);box-shadow:0 0 5px var(--teal);animation:dotpulse 2s infinite;}
+.sensor-vals{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.sensor-val-item{background:rgba(0,0,0,0.2);border-radius:11px;padding:12px 14px;}
+.sv-label{font-size:9px;color:var(--text2);font-weight:600;letter-spacing:0.5px;margin-bottom:5px;text-transform:uppercase;}
+.sv-value{font-size:28px;font-weight:800;line-height:1;color:var(--purple);}
+.sv-value.warm{color:var(--yellow);}
+.sv-value.hot{color:var(--red);}
+.sv-value.hum{color:var(--blue);}
+.sv-unit{font-size:13px;color:var(--text2);font-weight:400;}
+.sv-sub{font-size:9px;color:var(--text3);margin-top:3px;}
+.sensor-last{font-size:10px;color:var(--text3);margin-top:12px;text-align:right;}
+
+/* ── QUICK STATUS ── */
+.quick-grid{margin:0 20px 14px;display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
+.quick-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 8px;text-align:center;}
+.quick-item.on{border-color:rgba(44,255,208,0.2);background:linear-gradient(135deg,#0d1a10,#111520);}
+.quick-icon{font-size:18px;margin-bottom:5px;}
+.quick-val{font-size:10px;font-weight:700;margin-bottom:2px;color:var(--text3);}
+.quick-item.on .quick-val{color:var(--teal);}
+.quick-lbl{font-size:8px;color:var(--text3);}
+
+/* ── ALL CONTROL ── */
+.all-row{margin:0 20px 14px;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.all-btn{border-radius:var(--radius-sm);padding:13px 16px;border:none;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all 0.2s;}
+.all-on{background:linear-gradient(135deg,var(--teal),var(--teal2));color:#0a1a1a;}
+.all-off{background:var(--card);border:1px solid var(--border);color:var(--text2);}
+.all-btn:active{transform:scale(0.95);}
+
+/* ── DEVICE CARD (2-col grid) ── */
+.device-grid-2{padding:0 20px;display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:14px;}
+.device-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 14px;position:relative;overflow:hidden;transition:all 0.3s;cursor:pointer;}
+.device-card.active{background:linear-gradient(135deg,#0d1a10,#111a14);border-color:rgba(44,255,208,0.25);box-shadow:0 4px 20px rgba(44,255,208,0.07);}
+.device-card::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 80% 0%,rgba(44,255,208,0.06),transparent 60%);opacity:0;transition:opacity 0.3s;pointer-events:none;}
+.device-card.active::after{opacity:1;}
+.dc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+.dc-icon-wrap{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;background:rgba(255,255,255,0.06);transition:all 0.3s;}
+.device-card.active .dc-icon-wrap{background:rgba(44,255,208,0.12);}
+.dc-name{font-size:14px;font-weight:700;margin-bottom:2px;}
+.dc-sub{font-size:10px;color:var(--text2);}
+.dc-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:10px;}
+.dc-status{font-size:11px;font-weight:600;color:var(--text3);transition:color 0.3s;}
+.device-card.active .dc-status{color:var(--teal);}
+.status-dot{width:5px;height:5px;border-radius:50%;background:var(--text3);transition:all 0.3s;margin-right:4px;display:inline-block;}
+.device-card.active .status-dot{background:var(--teal);box-shadow:0 0 5px var(--teal);}
+
+/* AC card spans full width */
+.dc-full{grid-column:1/-1;}
+
+/* ── TOGGLE ── */
+.toggle-wrap{position:relative;width:46px;height:25px;flex-shrink:0;}
+.toggle-wrap input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-track{position:absolute;inset:0;background:#2a2f44;border-radius:13px;cursor:pointer;transition:all 0.3s;border:1px solid rgba(255,255,255,0.08);}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:17px;height:17px;background:#5a6080;border-radius:50%;transition:all 0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.3);}
+.toggle-wrap input:checked~.toggle-track{background:var(--teal2);border-color:transparent;}
+.toggle-wrap input:checked~.toggle-thumb{transform:translateX(21px);background:#fff;}
+
+/* ── MR DEVICE CARD (full-width) ── */
+.mr-device-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin:0 20px 12px;transition:all 0.3s;}
+.mr-device-card.active{border-color:rgba(44,255,208,0.25);background:linear-gradient(135deg,#0d1a10,#111520);}
+.mr-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;}
+.mr-icon-name{display:flex;align-items:center;gap:12px;}
+.mr-icon{width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:22px;transition:all 0.3s;}
+.mr-device-card.active .mr-icon{background:rgba(44,255,208,0.12);}
+.mr-name{font-size:15px;font-weight:700;}
+.mr-sub{font-size:10px;color:var(--text2);margin-top:2px;}
+.mr-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;}
+.mr-pill.on{background:rgba(44,255,208,0.1);color:var(--teal);border:1px solid rgba(44,255,208,0.2);}
+.mr-pill.off{background:rgba(255,255,255,0.04);color:var(--text3);border:1px solid var(--border);}
+.mr-pill-dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+.mr-pill.on .mr-pill-dot{animation:dotpulse 1.5s infinite;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.2);border-radius:10px;padding:11px 14px;}
+.toggle-lbl{font-size:12px;color:var(--text2);}
+
+/* ── AC REMOTE ── */
+.ac-remote{margin:0 20px;background:linear-gradient(135deg,#11182e,#0d1220);border:1px solid rgba(96,165,250,0.15);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden;}
+.ac-remote::before{content:'';position:absolute;top:-50px;right:-50px;width:160px;height:160px;background:radial-gradient(circle,rgba(96,165,250,0.07),transparent 70%);pointer-events:none;}
+.ac-room-selector{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 20px 14px;}
+.ac-sel-btn{padding:10px;border-radius:11px;border:1px solid var(--border);background:var(--card);color:var(--text2);font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;text-align:center;}
+.ac-sel-btn.active{background:var(--teal-dim);border-color:rgba(44,255,208,0.3);color:var(--teal);}
+.ac-display{background:rgba(0,0,0,0.3);border-radius:14px;padding:16px;margin-bottom:16px;text-align:center;border:1px solid rgba(96,165,250,0.08);}
+.ac-room-label{font-size:10px;font-weight:700;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.ac-power-status{font-size:13px;font-weight:600;margin-bottom:6px;}
+.ac-power-status.on{color:var(--teal);}
+.ac-power-status.off{color:var(--text3);}
+.ac-temp-big{font-size:56px;font-weight:800;color:var(--blue);line-height:1;margin-bottom:4px;}
+.ac-temp-big.off{color:var(--text3);}
+.ac-set-label{font-size:10px;color:var(--text2);}
+.ac-power-btn{width:100%;padding:13px;border-radius:12px;border:none;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;margin-bottom:14px;}
+.ac-power-on{background:linear-gradient(135deg,var(--teal),var(--teal2));color:#0a1a1a;}
+.ac-power-off{background:rgba(255,92,122,0.12);border:1px solid rgba(255,92,122,0.3);color:var(--red);}
+.ac-power-btn:active{transform:scale(0.97);}
+.ac-temp-controls{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}
+.ac-temp-btn{width:54px;height:54px;border-radius:50%;border:1.5px solid rgba(96,165,250,0.25);background:rgba(96,165,250,0.06);color:var(--blue);font-size:24px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;font-family:'Outfit',sans-serif;flex-shrink:0;}
+.ac-temp-btn:active{transform:scale(0.9);background:rgba(96,165,250,0.15);}
+.ac-temp-display{flex:1;text-align:center;}
+.ac-temp-num{font-size:38px;font-weight:800;color:var(--blue);line-height:1;}
+.ac-temp-label{font-size:10px;color:var(--text2);margin-top:3px;}
+.ac-sec-lbl{font-size:10px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:9px;}
+.ac-modes{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:14px;}
+.ac-mode-btn{padding:9px 4px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text3);font-size:9px;font-weight:600;cursor:pointer;text-align:center;transition:all 0.2s;font-family:'Outfit',sans-serif;}
+.ac-mode-btn.active{background:var(--teal-dim);border-color:rgba(44,255,208,0.3);color:var(--teal);}
+.ac-mode-icon{font-size:16px;margin-bottom:3px;}
+.ac-fan{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:14px;}
+.ac-fan-btn{padding:8px 4px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--text3);font-size:9px;font-weight:600;cursor:pointer;text-align:center;transition:all 0.2s;font-family:'Outfit',sans-serif;}
+.ac-fan-btn.active{background:rgba(96,165,250,0.1);border-color:rgba(96,165,250,0.3);color:var(--blue);}
+.ac-fan-icon{font-size:14px;margin-bottom:2px;}
+.ac-timer-row{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:16px;}
+.ac-timer-btn{padding:8px 4px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--text3);font-size:9px;font-weight:600;cursor:pointer;text-align:center;transition:all 0.2s;font-family:'Outfit',sans-serif;}
+.ac-timer-btn.active{background:rgba(255,209,102,0.1);border-color:rgba(255,209,102,0.3);color:var(--yellow);}
+.ac-stat-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;background:rgba(0,0,0,0.2);border-radius:10px;padding:11px;}
+.ac-stat-item{text-align:center;}
+.ac-stat-val{font-size:13px;font-weight:700;color:var(--text);}
+.ac-stat-lbl{font-size:9px;color:var(--text3);margin-top:2px;}
+
+/* ── REMINDERS ── */
+.rem-spotlight{background:linear-gradient(135deg,#130d1a,#0f0d20);border:1px solid rgba(167,139,250,0.2);border-radius:var(--radius);padding:16px;margin:0 20px 12px;}
+.rem-sp-label{font-size:9px;font-weight:700;color:var(--purple);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;}
+.rem-sp-time{font-size:24px;font-weight:800;color:var(--purple);margin-bottom:4px;}
+.rem-sp-emoji{font-size:18px;margin-bottom:4px;}
+.rem-sp-text{font-size:14px;font-weight:600;margin-bottom:4px;}
+.rem-sp-section{font-size:10px;color:var(--text2);letter-spacing:0.5px;}
+.rem-sp-btns{display:flex;gap:8px;margin-top:12px;}
+.rem-btn{flex:1;padding:10px;border-radius:11px;border:none;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.rem-ack{background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.3);color:var(--purple);}
+.rem-snooze{background:rgba(255,209,102,0.1);border:1px solid rgba(255,209,102,0.25);color:var(--yellow);}
+.rem-btn:active{transform:scale(0.95);}
+.rem-progress{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin:0 20px 12px;}
+.rem-prog-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.rem-prog-title{font-size:13px;font-weight:700;}
+.rem-prog-pct{font-size:20px;font-weight:800;color:var(--purple);}
+.rem-prog-bar-wrap{background:rgba(255,255,255,0.06);border-radius:4px;height:6px;overflow:hidden;margin-bottom:8px;}
+.rem-prog-bar{height:100%;background:linear-gradient(90deg,var(--purple),#7c3aed);border-radius:4px;transition:width 0.5s ease;}
+.rem-prog-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;}
+.rem-stat-item{background:rgba(0,0,0,0.2);border-radius:9px;padding:8px;text-align:center;}
+.rem-stat-val{font-size:16px;font-weight:800;}
+.rem-stat-lbl{font-size:9px;color:var(--text2);margin-top:2px;}
+.rem-list{display:flex;flex-direction:column;gap:6px;margin:0 20px 14px;}
+.rem-item{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px 13px;transition:all 0.2s;}
+.rem-item.active-now{border-color:rgba(167,139,250,0.3);background:linear-gradient(135deg,#130d1a,#0f0d20);}
+.rem-item.done{opacity:0.4;}
+.rem-check{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;}
+.rem-check.checked{background:var(--purple);border-color:var(--purple);}
+.rem-check.checked::after{content:'✓';color:#fff;font-size:11px;font-weight:700;}
+.rem-emoji{font-size:15px;flex-shrink:0;}
+.rem-info{flex:1;min-width:0;}
+.rem-text{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rem-item.done .rem-text{text-decoration:line-through;color:var(--text3);}
+.rem-meta{font-size:9px;color:var(--text3);margin-top:2px;}
+.rem-time{font-size:10px;font-weight:700;color:var(--purple);flex-shrink:0;}
+.rem-no-active{text-align:center;padding:16px;color:var(--text3);font-size:11px;}
+
+/* ── LOG ── */
+.log-card{margin:0 20px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+.log-title{font-size:13px;font-weight:700;margin-bottom:11px;display:flex;align-items:center;justify-content:space-between;}
+.log-clear{font-size:10px;color:var(--text3);cursor:pointer;padding:3px 8px;border-radius:7px;border:1px solid var(--border);background:transparent;font-family:'Outfit',sans-serif;}
+.log-list{display:flex;flex-direction:column;gap:5px;max-height:260px;overflow-y:auto;}
+.log-list::-webkit-scrollbar{width:2px;}
+.log-entry{display:flex;align-items:flex-start;gap:9px;padding:8px 10px;border-radius:9px;background:rgba(0,0,0,0.2);}
+.log-dot{width:6px;height:6px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+.log-dot.s{background:var(--teal);}
+.log-dot.w{background:var(--yellow);}
+.log-dot.e{background:var(--red);}
+.log-dot.i{background:var(--blue);}
+.log-ts{font-size:9px;color:var(--text3);flex-shrink:0;margin-top:1px;min-width:52px;}
+.log-msg{font-size:11px;color:var(--text2);flex:1;line-height:1.4;}
+
+/* ── SECTION TITLE ── */
+.section-title{padding:0 22px 11px;display:flex;align-items:center;justify-content:space-between;}
+.section-title span{font-size:15px;font-weight:700;}
+.section-title small{font-size:10px;color:var(--text2);}
+
+/* ── RIPPLE ── */
+.ripple{position:absolute;border-radius:50%;background:rgba(44,255,208,0.12);animation:rippleAnim 0.5s ease-out;pointer-events:none;}
+@keyframes rippleAnim{from{transform:scale(0);opacity:1;}to{transform:scale(3);opacity:0;}}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:108px;left:50%;transform:translateX(-50%) translateY(18px);background:rgba(26,29,39,0.97);border:1px solid rgba(167,139,250,0.25);border-radius:50px;padding:9px 20px;font-size:12px;font-weight:600;color:var(--text);backdrop-filter:blur(10px);opacity:0;transition:all 0.3s;z-index:9999;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── POPUP ── */
+.popup-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:5000;align-items:flex-end;justify-content:center;backdrop-filter:blur(8px);}
+.popup-bg.show{display:flex;}
+.popup-sheet{background:#141020;border:1px solid rgba(167,139,250,0.2);border-radius:24px 24px 0 0;padding:24px 22px 42px;width:100%;max-width:430px;animation:slideUp 0.35s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:none;}}
+.popup-handle{width:38px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin:0 auto 20px;}
+.popup-emoji{font-size:40px;margin-bottom:8px;text-align:center;}
+.popup-time{font-size:32px;font-weight:800;color:var(--purple);text-align:center;margin-bottom:6px;}
+.popup-text{font-size:17px;font-weight:700;text-align:center;margin-bottom:4px;}
+.popup-section{font-size:11px;color:var(--text2);text-align:center;margin-bottom:20px;}
+.popup-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.popup-btn{padding:14px;border-radius:14px;border:none;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+.popup-ack{background:linear-gradient(135deg,var(--purple),#7c3aed);color:#fff;}
+.popup-snooze{background:rgba(255,209,102,0.12);border:1px solid rgba(255,209,102,0.3);color:var(--yellow);}
+.popup-btn:active{transform:scale(0.97);}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;padding:10px 10px 28px;background:rgba(15,17,23,0.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;z-index:100;}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:5px 12px;border-radius:10px;transition:all 0.2s;position:relative;}
+.nav-icon{font-size:20px;color:var(--text3);transition:color 0.2s;}
+.nav-label{font-size:9px;font-weight:600;color:var(--text3);transition:color 0.2s;}
+.nav-item.active .nav-icon,.nav-item.active .nav-label{color:var(--purple);}
+.nav-badge{position:absolute;top:2px;right:6px;background:var(--red);color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:8px;min-width:14px;text-align:center;}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+.anim{animation:fadeUp 0.3s ease both;}
+::-webkit-scrollbar{width:2px;}
+::-webkit-scrollbar-thumb{background:var(--border);}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ══════════════════════
+     PAGE 1: HOME
+══════════════════════ -->
+<div class="page active" id="page-home">
+  <div class="header">
+    <div>
+      <div class="greeting">Hey, <span>Kedar!</span></div>
+      <div class="header-title">Studio Room</div>
+      <div class="header-sub" id="homeDate">Loading...</div>
+    </div>
+    <div><img src="https://pharmacycondomwala.in/wp-content/uploads/2026/04/logo-scaled.png" style="height:38px;width:auto;object-fit:contain;border-radius:8px;" alt="CC"/></div>
+  </div>
+
+  <div class="conn-bar">
+    <div class="conn-bar-dot" id="connDot"></div>
+    <div class="conn-bar-text">Firebase: <span id="connText">Connecting...</span></div>
+    <div class="conn-time" id="connTime">--:--:--</div>
+  </div>
+
+  <!-- Sensor (Machine Room data) -->
+  <div class="sensor-card anim">
+    <div class="sensor-header">
+      <div class="sensor-badge">🌡️ Machine Room Sensor</div>
+      <div class="sensor-conn">
+        <div class="sensor-conn-dot" id="sensorDot"></div>
+        <span id="sensorStatus">Offline</span>
+      </div>
+    </div>
+    <div class="sensor-vals">
+      <div class="sensor-val-item">
+        <div class="sv-label">Temperature</div>
+        <div class="sv-value" id="tempDisp">--<span class="sv-unit">°C</span></div>
+        <div class="sv-sub" id="tempSub">Waiting...</div>
+      </div>
+      <div class="sensor-val-item">
+        <div class="sv-label">Humidity</div>
+        <div class="sv-value hum" id="humDisp">--<span class="sv-unit">%</span></div>
+        <div class="sv-sub" id="humSub">Waiting...</div>
+      </div>
+    </div>
+    <div class="sensor-last">Updated: <span id="sensorUpd">--</span></div>
+  </div>
+
+  <!-- Quick status 4 devices -->
+  <div class="quick-grid anim" style="animation-delay:0.05s;" id="quickGrid">
+    <div class="quick-item" id="qs-light1">
+      <div class="quick-icon">💡</div>
+      <div class="quick-val" id="qs-light1-val">Off</div>
+      <div class="quick-lbl">Light 1</div>
+    </div>
+    <div class="quick-item" id="qs-light2">
+      <div class="quick-icon">💡</div>
+      <div class="quick-val" id="qs-light2-val">Off</div>
+      <div class="quick-lbl">Light 2</div>
+    </div>
+    <div class="quick-item" id="qs-light3">
+      <div class="quick-icon">💡</div>
+      <div class="quick-val" id="qs-light3-val">Off</div>
+      <div class="quick-lbl">Light 3</div>
+    </div>
+    <div class="quick-item" id="qs-ac">
+      <div class="quick-icon">❄️</div>
+      <div class="quick-val" id="qs-ac-val">Off</div>
+      <div class="quick-lbl">AC</div>
+    </div>
+  </div>
+
+  <!-- All ON/OFF -->
+  <div class="all-row anim" style="animation-delay:0.08s;">
+    <button class="all-btn all-on" onclick="ctrlAll(true)">⚡ All ON</button>
+    <button class="all-btn all-off" onclick="ctrlAll(false)">⏹ All OFF</button>
+  </div>
+
+  <!-- Active Reminder Spotlight -->
+  <div class="rem-spotlight anim" style="animation-delay:0.1s;">
+    <div class="rem-sp-label">⚡ Active Reminder</div>
+    <div id="homeNoActive" class="rem-no-active">No active reminder right now</div>
+    <div id="homeActiveRem" style="display:none;">
+      <div class="rem-sp-time" id="homeATime">--:--</div>
+      <div class="rem-sp-emoji" id="homeAEmoji"></div>
+      <div class="rem-sp-text" id="homeAText"></div>
+      <div class="rem-sp-section" id="homeASec"></div>
+      <div class="rem-sp-btns">
+        <button class="rem-btn rem-ack" onclick="doAck()">✓ Done</button>
+        <button class="rem-btn rem-snooze" onclick="doSnooze()">⏱ Snooze</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════
+     PAGE 2: CONTROLS
+══════════════════════ -->
+<div class="page" id="page-control">
+  <div class="header">
+    <div>
+      <div class="greeting">Live Control</div>
+      <div class="header-title">Devices</div>
+      <div class="header-sub">Studio Room — 4 Devices</div>
+    </div>
+    <div><img src="https://pharmacycondomwala.in/wp-content/uploads/2026/04/logo-scaled.png" style="height:38px;width:auto;object-fit:contain;border-radius:8px;" alt="CC"/></div>
+  </div>
+
+  <!-- All control -->
+  <div class="all-row" style="margin-bottom:14px;">
+    <button class="all-btn all-on" onclick="ctrlAll(true)">⚡ All ON</button>
+    <button class="all-btn all-off" onclick="ctrlAll(false)">⏹ All OFF</button>
+  </div>
+
+  <!-- Active count -->
+  <div class="section-title" style="padding:0 22px 11px;">
+    <span>Studio Devices</span>
+    <small id="activeCount">0 active</small>
+  </div>
+
+  <!-- 2×2 device grid (3 lights) then AC full width -->
+  <div class="device-grid-2">
+    <!-- Light 1 -->
+    <div class="device-card anim" id="card-light1" onclick="toggleDevice('light1')">
+      <div class="dc-top">
+        <div class="dc-icon-wrap">💡</div>
+        <label class="toggle-wrap" onclick="event.stopPropagation()">
+          <input type="checkbox" id="tog-light1" onchange="onToggle('light1',this.checked)"/>
+          <div class="toggle-track"></div><div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="dc-name">Light 1</div>
+      <div class="dc-sub">Studio — Main</div>
+      <div class="dc-bottom">
+        <div class="dc-status"><span class="status-dot"></span><span id="txt-light1">OFF</span></div>
+      </div>
+    </div>
+
+    <!-- Light 2 -->
+    <div class="device-card anim" id="card-light2" style="animation-delay:0.05s;" onclick="toggleDevice('light2')">
+      <div class="dc-top">
+        <div class="dc-icon-wrap">💡</div>
+        <label class="toggle-wrap" onclick="event.stopPropagation()">
+          <input type="checkbox" id="tog-light2" onchange="onToggle('light2',this.checked)"/>
+          <div class="toggle-track"></div><div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="dc-name">Light 2</div>
+      <div class="dc-sub">Studio — Side</div>
+      <div class="dc-bottom">
+        <div class="dc-status"><span class="status-dot"></span><span id="txt-light2">OFF</span></div>
+      </div>
+    </div>
+
+    <!-- Light 3 -->
+    <div class="device-card anim" id="card-light3" style="animation-delay:0.1s;" onclick="toggleDevice('light3')">
+      <div class="dc-top">
+        <div class="dc-icon-wrap">💡</div>
+        <label class="toggle-wrap" onclick="event.stopPropagation()">
+          <input type="checkbox" id="tog-light3" onchange="onToggle('light3',this.checked)"/>
+          <div class="toggle-track"></div><div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="dc-name">Light 3</div>
+      <div class="dc-sub">Studio — Back</div>
+      <div class="dc-bottom">
+        <div class="dc-status"><span class="status-dot"></span><span id="txt-light3">OFF</span></div>
+      </div>
+    </div>
+
+    <!-- AC — full width -->
+    <div class="device-card dc-full anim" id="card-ac" style="animation-delay:0.15s;" onclick="toggleDevice('ac')">
+      <div class="dc-top">
+        <div class="dc-icon-wrap">❄️</div>
+        <label class="toggle-wrap" onclick="event.stopPropagation()">
+          <input type="checkbox" id="tog-ac" onchange="onToggle('ac',this.checked)"/>
+          <div class="toggle-track"></div><div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div class="dc-name">Air Conditioning</div>
+          <div class="dc-sub">Studio — AC Unit</div>
+        </div>
+        <div class="dc-status" style="font-size:12px;"><span class="status-dot"></span><span id="txt-ac">OFF</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity Log -->
+  <div class="log-card anim">
+    <div class="log-title">
+      Activity Log
+      <button class="log-clear" onclick="clearLog()">Clear</button>
+    </div>
+    <div class="log-list" id="logList">
+      <div class="log-entry"><div class="log-dot i"></div><span class="log-ts">--:--:--</span><span class="log-msg">System ready...</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════
+     PAGE 3: AC REMOTE
+══════════════════════ -->
+<div class="page" id="page-ac">
+  <div class="header">
+    <div>
+      <div class="greeting">Smart Remote</div>
+      <div class="header-title">AC Control</div>
+      <div class="header-sub" id="acRoomLabel">Studio Room</div>
+    </div>
+    <div><img src="https://pharmacycondomwala.in/wp-content/uploads/2026/04/logo-scaled.png" style="height:38px;width:auto;object-fit:contain;border-radius:8px;" alt="CC"/></div>
+  </div>
+
+  <!-- Room Selector -->
+  <div class="ac-room-selector">
+    <button class="ac-sel-btn active" id="acSelStudio" onclick="selectACRoom('studio',this)">🎨 Studio Room</button>
+    <button class="ac-sel-btn" id="acSelMachine" onclick="selectACRoom('machine',this)">🏭 Machine Room</button>
+  </div>
+
+  <div class="ac-remote">
+    <div class="ac-display">
+      <div class="ac-room-label" id="acDisplayRoom">🎨 STUDIO ROOM</div>
+      <div class="ac-power-status off" id="acPowerStatus">● STANDBY</div>
+      <div class="ac-temp-big off" id="acTempBig">--°</div>
+      <div class="ac-set-label">Set Temperature</div>
+    </div>
+
+    <button class="ac-power-btn ac-power-on" id="acPowerBtn" onclick="toggleAC()">
+      <span id="acPowerIcon">⚡</span><span id="acPowerTxt">Turn ON</span>
+    </button>
+
+    <div class="ac-sec-lbl">🌡️ Temperature</div>
+    <div class="ac-temp-controls">
+      <button class="ac-temp-btn" onclick="changeACTemp(-1)">−</button>
+      <div class="ac-temp-display">
+        <div class="ac-temp-num" id="acTempNum">24</div>
+        <div class="ac-temp-label">°C (16–30)</div>
+      </div>
+      <button class="ac-temp-btn" onclick="changeACTemp(1)">+</button>
+    </div>
+
+    <div class="ac-sec-lbl">🔄 Mode</div>
+    <div class="ac-modes">
+      <button class="ac-mode-btn active" id="acMode-cool" onclick="setACMode('cool',this)"><div class="ac-mode-icon">❄️</div>Cool</button>
+      <button class="ac-mode-btn" id="acMode-heat" onclick="setACMode('heat',this)"><div class="ac-mode-icon">🔥</div>Heat</button>
+      <button class="ac-mode-btn" id="acMode-fan" onclick="setACMode('fan',this)"><div class="ac-mode-icon">💨</div>Fan</button>
+      <button class="ac-mode-btn" id="acMode-dry" onclick="setACMode('dry',this)"><div class="ac-mode-icon">💧</div>Dry</button>
+    </div>
+
+    <div class="ac-sec-lbl">💨 Fan Speed</div>
+    <div class="ac-fan">
+      <button class="ac-fan-btn" id="acFan-auto" onclick="setACFan('auto',this)"><div class="ac-fan-icon">🔄</div>Auto</button>
+      <button class="ac-fan-btn active" id="acFan-low" onclick="setACFan('low',this)"><div class="ac-fan-icon">🌬️</div>Low</button>
+      <button class="ac-fan-btn" id="acFan-med" onclick="setACFan('med',this)"><div class="ac-fan-icon">💨</div>Med</button>
+      <button class="ac-fan-btn" id="acFan-high" onclick="setACFan('high',this)"><div class="ac-fan-icon">🌪️</div>High</button>
+    </div>
+
+    <div class="ac-sec-lbl">⏱️ Auto OFF Timer</div>
+    <div class="ac-timer-row">
+      <button class="ac-timer-btn active" id="acTimer-off" onclick="setACTimer(0,this)">Off</button>
+      <button class="ac-timer-btn" id="acTimer-30" onclick="setACTimer(30,this)">30m</button>
+      <button class="ac-timer-btn" id="acTimer-60" onclick="setACTimer(60,this)">1hr</button>
+      <button class="ac-timer-btn" id="acTimer-120" onclick="setACTimer(120,this)">2hr</button>
+    </div>
+
+    <div class="ac-stat-bar">
+      <div class="ac-stat-item"><div class="ac-stat-val" id="acStatMode">Cool</div><div class="ac-stat-lbl">Mode</div></div>
+      <div class="ac-stat-item"><div class="ac-stat-val" id="acStatFan">Low</div><div class="ac-stat-lbl">Fan</div></div>
+      <div class="ac-stat-item"><div class="ac-stat-val" id="acStatTimer">Off</div><div class="ac-stat-lbl">Timer</div></div>
+    </div>
+  </div>
+  <div style="height:14px;"></div>
+</div>
+
+<!-- ══════════════════════
+     PAGE 4: REMINDERS
+══════════════════════ -->
+<div class="page" id="page-reminders">
+  <div class="header">
+    <div>
+      <div class="greeting">ColorCast</div>
+      <div class="header-title">Reminders</div>
+      <div class="header-sub" id="remDate">Daily Schedule</div>
+    </div>
+    <div><img src="https://pharmacycondomwala.in/wp-content/uploads/2026/04/logo-scaled.png" style="height:38px;width:auto;object-fit:contain;border-radius:8px;" alt="CC"/></div>
+  </div>
+
+  <div class="rem-progress">
+    <div class="rem-prog-header">
+      <div class="rem-prog-title">Today's Progress</div>
+      <div class="rem-prog-pct" id="remPct">0%</div>
+    </div>
+    <div class="rem-prog-bar-wrap"><div class="rem-prog-bar" id="remProgBar" style="width:0%"></div></div>
+    <div class="rem-prog-stats">
+      <div class="rem-stat-item"><div class="rem-stat-val" style="color:var(--purple);" id="remDone">0</div><div class="rem-stat-lbl">Done</div></div>
+      <div class="rem-stat-item"><div class="rem-stat-val" style="color:var(--red);" id="remLeft">0</div><div class="rem-stat-lbl">Left</div></div>
+      <div class="rem-stat-item"><div class="rem-stat-val" style="color:var(--yellow);" id="remNext">--</div><div class="rem-stat-lbl">Next</div></div>
+    </div>
+  </div>
+
+  <div class="section-title"><span>All Reminders</span></div>
+  <div class="rem-list" id="remList"></div>
+</div>
+
+<!-- ── POPUP ── -->
+<div class="popup-bg" id="popup">
+  <div class="popup-sheet">
+    <div class="popup-handle"></div>
+    <div class="popup-emoji" id="popEmoji">🔔</div>
+    <div class="popup-time" id="popTime">--:--</div>
+    <div class="popup-text" id="popText">Reminder</div>
+    <div class="popup-section" id="popSection"></div>
+    <div class="popup-btns">
+      <button class="popup-btn popup-ack" onclick="doAck()">✓ Done</button>
+      <button class="popup-btn popup-snooze" onclick="doSnooze()">⏱ 5 min</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ── BOTTOM NAV ── -->
+<div class="bottom-nav">
+  <div class="nav-item active" id="nav-home" onclick="showPage('home')">
+    <div class="nav-icon">🏠</div>
+    <div class="nav-label">Home</div>
+  </div>
+  <div class="nav-item" id="nav-control" onclick="showPage('control')">
+    <div class="nav-icon">💡</div>
+    <div class="nav-label">Control</div>
+  </div>
+  <div class="nav-item" id="nav-ac" onclick="showPage('ac')">
+    <div class="nav-icon">❄️</div>
+    <div class="nav-label">AC</div>
+  </div>
+  <div class="nav-item" id="nav-reminders" onclick="showPage('reminders')">
+    <div class="nav-icon">🔔</div>
+    <div class="nav-label">Reminders</div>
+    <div class="nav-badge" id="remBadge" style="display:none;"></div>
+  </div>
+</div>
+
+</div><!-- .app -->
+
+<script>
+// ════ FIREBASE ════
+firebase.initializeApp({
+  apiKey:"AIzaSyD3teBXo9Ajd3aijwfODKyKUEH8ujvx-MQ",
+  authDomain:"colorcast-reminder-6678c.firebaseapp.com",
+  databaseURL:"https://colorcast-reminder-6678c-default-rtdb.firebaseio.com",
+  projectId:"colorcast-reminder-6678c",
+  storageBucket:"colorcast-reminder-6678c.firebasestorage.app",
+  messagingSenderId:"324937632463",
+  appId:"1:324937632463:web:cb5bf0fd56fef08737c5ba",
+  measurementId:"G-BJ2BRRRHS8"
+});
+const db = firebase.database();
+
+// ════ NAVIGATION ════
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ════ CLOCK ════
+function tick(){
+  const n=new Date();
+  const t=n.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const d=n.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  const ct=document.getElementById('connTime');if(ct)ct.textContent=t;
+  const hd=document.getElementById('homeDate');if(hd)hd.textContent=d;
+  const rd=document.getElementById('remDate');if(rd)rd.textContent=d;
+  checkReminders();
+}
+setInterval(tick,1000);tick();
+
+// ════ TOAST ════
+let toastTimer=null;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  if(toastTimer)clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ════ FIREBASE CONNECTION ════
+db.ref('.info/connected').on('value',s=>{
+  const on=s.val()===true;
+  const dot=document.getElementById('connDot');
+  const txt=document.getElementById('connText');
+  if(dot)dot.className='conn-bar-dot'+(on?' on':'');
+  if(txt)txt.textContent=on?'Connected':'Offline';
+  if(on)addLog('Firebase connected','s');
+});
+
+// ════ STATE ════
+const DEVICES=['light1','light2','light3','ac'];
+let state={light1:false,light2:false,light3:false,ac:false};
+
+// ════ SENSOR ════
+// Paths same as CC_Dashboard: /MachineRoom/sensors/temperature & /MachineRoom/sensors/humidity
+let _sTemp=0, _sHum=0;
+
+function updateSensorUI(temp, hum){
+  const tEl=document.getElementById('tempDisp');
+  const hEl=document.getElementById('humDisp');
+  if(tEl){tEl.innerHTML=temp.toFixed(1)+'<span class="sv-unit">°C</span>';tEl.className='sv-value'+(temp>=35?' hot':temp>=30?' warm':'');}
+  if(hEl)hEl.innerHTML=hum.toFixed(0)+'<span class="sv-unit">%</span>';
+  const ts=document.getElementById('tempSub');if(ts)ts.textContent=temp>=35?'⚠️ Too Hot':temp>=30?'Warm':'Normal';
+  const hs=document.getElementById('humSub');if(hs)hs.textContent=hum>=70?'High':'Normal';
+  const dot=document.getElementById('sensorDot');if(dot)dot.className='sensor-conn-dot on';
+  const st=document.getElementById('sensorStatus');if(st)st.textContent='Online';
+  const up=document.getElementById('sensorUpd');if(up)up.textContent=new Date().toLocaleTimeString('en-IN');
+}
+
+db.ref('/MachineRoom/sensors/temperature').on('value',s=>{
+  if(s.val()===null)return;
+  _sTemp=parseFloat(s.val())||0;
+  updateSensorUI(_sTemp, _sHum);
+  addLog('Temp: '+_sTemp.toFixed(1)+'°C','i');
+});
+
+db.ref('/MachineRoom/sensors/humidity').on('value',s=>{
+  if(s.val()===null)return;
+  _sHum=parseFloat(s.val())||0;
+  updateSensorUI(_sTemp, _sHum);
+});
+
+// ════ DEVICE CONTROL ════
+function updateCard(device,isOn){
+  state[device]=isOn;
+  const card=document.getElementById('card-'+device);
+  const tog=document.getElementById('tog-'+device);
+  const txt=document.getElementById('txt-'+device);
+  const qs=document.getElementById('qs-'+device);
+  const qsVal=document.getElementById('qs-'+device+'-val');
+  if(card)card.classList.toggle('active',isOn);
+  if(tog)tog.checked=isOn;
+  if(txt)txt.textContent=isOn?'ON':'OFF';
+  if(qs){qs.classList.toggle('on',isOn);}
+  if(qsVal){qsVal.textContent=isOn?'On':'Off';}
+  // Active count
+  const active=DEVICES.filter(d=>state[d]).length;
+  const ac=document.getElementById('activeCount');if(ac)ac.textContent=active+' active';
+}
+
+DEVICES.forEach(dev=>{
+  db.ref('/studio/'+dev).on('value',s=>{
+    if(s.val()!==null)updateCard(dev,s.val()===1||s.val()===true);
+  });
+});
+
+function onToggle(device,isOn){
+  db.ref('/studio/'+device).set(isOn?1:0);
+  const label=device==='ac'?'Studio AC':device.replace(/(\d)/,' $1').replace(/^./,c=>c.toUpperCase());
+  showToast(label+' '+(isOn?'ON 💡':'OFF'));
+  addLog(label+' → '+(isOn?'ON':'OFF'),'s');
+}
+function toggleDevice(device){
+  db.ref('/studio/'+device).set(state[device]?0:1);
+}
+function ctrlAll(on){
+  db.ref('/studio/all').set(on?1:-1);
+  DEVICES.forEach(d=>{
+    db.ref('/studio/'+d).set(on?1:0);
+    updateCard(d,on);
+  });
+  showToast(on?'⚡ All ON':'⏹ All OFF');
+  addLog('Studio All → '+(on?'ON':'OFF'),'s');
+}
+
+// ════ AC REMOTE ════
+let acRoom='studio',acIsOn=false,acTemp=24,acMode='cool',acFan='low',acTimerTimeout=null;
+
+function selectACRoom(room,btn){
+  acRoom=room;
+  document.querySelectorAll('.ac-sel-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  const labels={studio:'🎨 Studio Room',machine:'🏭 Machine Room'};
+  document.getElementById('acDisplayRoom').textContent=labels[room];
+  document.getElementById('acRoomLabel').textContent=room==='studio'?'Studio Room':'Machine Room';
+  // Sync current AC state
+  const path=room==='studio'?'/studio/ac':'/MachineRoom/status/ac';
+  db.ref(path).once('value',s=>{
+    if(s.val()!==null)updateACDisplay(s.val()===1||s.val()===true);
+  });
+  // Load saved settings
+  loadACSettings(room);
+}
+
+function loadACSettings(room){
+  const path='/acSettings/'+(room==='studio'?'studio':'machine');
+  db.ref(path).once('value',s=>{
+    if(!s.val())return;
+    const d=s.val();
+    if(d.temp)acTemp=d.temp;
+    if(d.mode){
+      acMode=d.mode;
+      document.querySelectorAll('.ac-mode-btn').forEach(b=>b.classList.remove('active'));
+      const mb=document.getElementById('acMode-'+d.mode);if(mb)mb.classList.add('active');
+      document.getElementById('acStatMode').textContent=d.mode.charAt(0).toUpperCase()+d.mode.slice(1);
+    }
+    if(d.fan){
+      acFan=d.fan;
+      document.querySelectorAll('.ac-fan-btn').forEach(b=>b.classList.remove('active'));
+      const fb=document.getElementById('acFan-'+d.fan);if(fb)fb.classList.add('active');
+      document.getElementById('acStatFan').textContent=d.fan.charAt(0).toUpperCase()+d.fan.slice(1);
+    }
+    document.getElementById('acTempNum').textContent=acTemp;
+    if(d.on!==undefined)updateACDisplay(d.on===true);
+  });
+}
+
+function updateACDisplay(on){
+  acIsOn=on;
+  const st=document.getElementById('acPowerStatus');
+  const tb=document.getElementById('acTempBig');
+  const pb=document.getElementById('acPowerBtn');
+  const pi=document.getElementById('acPowerIcon');
+  const pt=document.getElementById('acPowerTxt');
+  if(st){st.textContent=on?'● ON':'● STANDBY';st.className='ac-power-status '+(on?'on':'off');}
+  if(tb){tb.textContent=on?acTemp+'°':'--°';tb.className='ac-temp-big'+(on?'':' off');}
+  if(pb)pb.className='ac-power-btn '+(on?'ac-power-off':'ac-power-on');
+  if(pi)pi.textContent=on?'⏹':'⚡';
+  if(pt)pt.textContent=on?'Turn OFF':'Turn ON';
+}
+function toggleAC(){
+  const newOn=!acIsOn;
+  const path=acRoom==='studio'?'/studio/ac':'/MachineRoom/control/ac';
+  db.ref(path).set(newOn?1:0);
+  db.ref('/acSettings/'+(acRoom==='studio'?'studio':'machine')).set({temp:acTemp,mode:acMode,fan:acFan,on:newOn,ts:Date.now()});
+  updateACDisplay(newOn);
+  if(acRoom==='studio')updateCard('ac',newOn);
+  showToast((acRoom==='studio'?'Studio':'MR')+' AC '+(newOn?'ON':'OFF'));
+  addLog((acRoom==='studio'?'Studio':'MR')+' AC → '+(newOn?'ON':'OFF'),'s');
+}
+function changeACTemp(d){
+  acTemp=Math.min(30,Math.max(16,acTemp+d));
+  document.getElementById('acTempNum').textContent=acTemp;
+  if(acIsOn)document.getElementById('acTempBig').textContent=acTemp+'°';
+  db.ref('/acSettings/'+(acRoom==='studio'?'studio':'machine')+'/temp').set(acTemp);
+  showToast('Temp: '+acTemp+'°C');
+}
+function setACMode(mode,btn){
+  acMode=mode;
+  document.querySelectorAll('.ac-mode-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  document.getElementById('acStatMode').textContent=mode.charAt(0).toUpperCase()+mode.slice(1);
+  db.ref('/acSettings/'+(acRoom==='studio'?'studio':'machine')+'/mode').set(mode);
+  showToast('Mode: '+mode);
+}
+function setACFan(speed,btn){
+  acFan=speed;
+  document.querySelectorAll('.ac-fan-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  document.getElementById('acStatFan').textContent=speed.charAt(0).toUpperCase()+speed.slice(1);
+  db.ref('/acSettings/'+(acRoom==='studio'?'studio':'machine')+'/fan').set(speed);
+  showToast('Fan: '+speed);
+}
+function setACTimer(mins,btn){
+  document.querySelectorAll('.ac-timer-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  document.getElementById('acStatTimer').textContent=mins===0?'Off':mins<60?mins+'m':(mins/60)+'hr';
+  if(acTimerTimeout){clearTimeout(acTimerTimeout);acTimerTimeout=null;}
+  if(mins>0){
+    acTimerTimeout=setTimeout(()=>{
+      const path=acRoom==='studio'?'/studio/ac':'/MachineRoom/control/ac';
+      db.ref(path).set(0);
+      updateACDisplay(false);
+      if(acRoom==='studio')updateCard('ac',false);
+      showToast('AC Timer: Auto OFF');
+    },mins*60*1000);
+    showToast('Timer: '+mins+' min');
+  }
+}
+// Sync AC from Firebase
+db.ref('/studio/ac').on('value',s=>{
+  if(s.val()!==null&&acRoom==='studio')updateACDisplay(s.val()===1);
+});
+db.ref('/MachineRoom/status/ac').on('value',s=>{
+  if(s.val()!==null&&acRoom==='machine')updateACDisplay(s.val()===true||s.val()===1);
+});
+
+// ════ ACTIVITY LOG ════
+let logEntries=[];
+function addLog(msg,type='i'){
+  const ts=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  logEntries.unshift({msg,type,ts});
+  if(logEntries.length>50)logEntries.pop();
+  renderLog();
+}
+function renderLog(){
+  const list=document.getElementById('logList');if(!list)return;
+  list.innerHTML=logEntries.map(e=>`<div class="log-entry"><div class="log-dot ${e.type}"></div><span class="log-ts">${e.ts}</span><span class="log-msg">${e.msg}</span></div>`).join('');
+}
+function clearLog(){logEntries=[];renderLog();showToast('Log cleared');}
+
+// ════ REMINDERS ════
+const REMINDERS=[
+  {id:'r1', h:9,  m:30, emoji:'🧹', text:'Basic cleaning check',           section:'MORNING'},
+  {id:'r2', h:9,  m:35, emoji:'🤖', text:'Machine room cleaning',          section:'MORNING'},
+  {id:'r3', h:9,  m:40, emoji:'🌡️', text:'Temp & humidity check',         section:'MORNING'},
+  {id:'r4', h:9,  m:45, emoji:'⚙️', text:'Machine status check',           section:'MORNING'},
+  {id:'r5', h:9,  m:50, emoji:'📦', text:'Orders check — new + pending',   section:'MORNING'},
+  {id:'r6', h:9,  m:55, emoji:'🎞️', text:'Raw material check',            section:'MORNING'},
+  {id:'r7', h:10, m:0,  emoji:'📋', text:'Set day plan — priority tasks',  section:'MORNING'},
+  {id:'r8', h:10, m:15, emoji:'🖨️', text:'Production start',              section:'PRODUCTION'},
+  {id:'r9', h:11, m:30, emoji:'🔍', text:'Mid-session quality review',     section:'PRODUCTION'},
+  {id:'r10',h:12, m:30, emoji:'💬', text:'Customer replies — WhatsApp',    section:'PRODUCTION'},
+  {id:'r11',h:13, m:30, emoji:'📌', text:'Afternoon prep — orders ready',  section:'PRODUCTION'},
+  {id:'rb', h:14, m:0,  emoji:'🍛', text:'Lunch break',                    section:'BREAK'},
+  {id:'r12',h:15, m:0,  emoji:'⏳', text:'Resume pending work',            section:'AFTERNOON'},
+  {id:'r13',h:16, m:30, emoji:'🆕', text:'New orders + status update',     section:'AFTERNOON'},
+  {id:'r14',h:17, m:0,  emoji:'🌐', text:'Website / product update',       section:'AFTERNOON'},
+  {id:'r15',h:18, m:0,  emoji:'♻️', text:'Material usage — wastage check', section:'AFTERNOON'},
+  {id:'r16',h:18, m:30, emoji:'📝', text:'Day wrap-up — pending list',     section:'AFTERNOON'},
+  {id:'r17',h:19, m:30, emoji:'🧽', text:'Final cleaning',                 section:'CLOSING'},
+  {id:'r18',h:20, m:0,  emoji:'💾', text:'Data backup',                    section:'CLOSING'},
+  {id:'r19',h:20, m:15, emoji:'📡', text:'Dashboard check',                section:'CLOSING'},
+  {id:'r20',h:20, m:30, emoji:'⚡', text:'Electricity usage check',        section:'CLOSING'},
+  {id:'r21',h:20, m:45, emoji:'📊', text:'End-of-day report',              section:'CLOSING'},
+  {id:'r22',h:21, m:0,  emoji:'🔒', text:'Close shop — day complete',      section:'CLOSING'},
+];
+
+let ackedToday=new Set(),snoozeMap={},popupRem=null,beepInterval=null,audioCtx=null;
+
+function loadAcked(){
+  const today=new Date().toDateString();
+  db.ref('/reminders/acked/'+today).once('value',s=>{
+    if(s.val())Object.keys(s.val()).forEach(id=>ackedToday.add(id));
+    renderReminders();
+  });
+}
+function saveAcked(key){
+  const today=new Date().toDateString();
+  db.ref('/reminders/acked/'+today+'/'+key).set(true);
+}
+function fmt12(h,m){
+  const ap=h>=12?'PM':'AM';const hh=h%12||12;
+  return `${hh}:${String(m).padStart(2,'0')} ${ap}`;
+}
+function getActive(){
+  const n=new Date();const now=n.getHours()*60+n.getMinutes();
+  return REMINDERS.find(r=>{
+    const rMin=r.h*60+r.m;const key=r.id+'_'+n.toDateString();
+    const snz=snoozeMap[r.id];if(snz&&now<snz)return false;
+    return rMin<=now&&rMin>now-2&&!ackedToday.has(key);
+  });
+}
+function getNext(){
+  const n=new Date();const now=n.getHours()*60+n.getMinutes();
+  const future=REMINDERS.filter(r=>{
+    const key=r.id+'_'+n.toDateString();
+    return (r.h*60+r.m)>now&&!ackedToday.has(key);
+  });
+  if(!future.length)return null;
+  return future.sort((a,b)=>(a.h*60+a.m)-(b.h*60+b.m))[0];
+}
+function checkReminders(){
+  const active=getActive();
+  if(active&&!popupRem){popupRem=active;showPopup(active);startBeep();sendNotif(active);}
+  renderHomeSpotlight(active);
+  renderReminders();
+  updateRemBadge();
+}
+function showPopup(r){
+  document.getElementById('popEmoji').textContent=r.emoji;
+  document.getElementById('popTime').textContent=fmt12(r.h,r.m);
+  document.getElementById('popText').textContent=r.text;
+  document.getElementById('popSection').textContent=r.section;
+  document.getElementById('popup').classList.add('show');
+}
+function doAck(){
+  if(!popupRem)return;
+  const key=popupRem.id+'_'+new Date().toDateString();
+  ackedToday.add(key);saveAcked(key);
+  document.getElementById('popup').classList.remove('show');
+  stopBeep();popupRem=null;
+  renderReminders();updateRemBadge();
+  showToast('✓ Done!');
+}
+function doSnooze(){
+  if(!popupRem)return;
+  const n=new Date();
+  snoozeMap[popupRem.id]=n.getHours()*60+n.getMinutes()+5;
+  document.getElementById('popup').classList.remove('show');
+  stopBeep();popupRem=null;
+  showToast('⏱ Snoozed 5 min');
+}
+function renderHomeSpotlight(active){
+  const no=document.getElementById('homeNoActive');
+  const act=document.getElementById('homeActiveRem');
+  if(!active){if(no)no.style.display='block';if(act)act.style.display='none';return;}
+  if(no)no.style.display='none';if(act)act.style.display='block';
+  const t=document.getElementById('homeATime');if(t)t.textContent=fmt12(active.h,active.m);
+  const e=document.getElementById('homeAEmoji');if(e)e.textContent=active.emoji;
+  const tx=document.getElementById('homeAText');if(tx)tx.textContent=active.text;
+  const sc=document.getElementById('homeASec');if(sc)sc.textContent=active.section;
+}
+function renderReminders(){
+  const n=new Date();const now=n.getHours()*60+n.getMinutes();const today=n.toDateString();
+  const total=REMINDERS.length;let done=0;
+  const list=document.getElementById('remList');if(!list)return;
+  list.innerHTML='';
+  REMINDERS.forEach(r=>{
+    const key=r.id+'_'+today;const isDone=ackedToday.has(key);
+    const rMin=r.h*60+r.m;const isNow=rMin<=now&&rMin>now-2;
+    if(isDone)done++;
+    const div=document.createElement('div');
+    div.className='rem-item'+(isDone?' done':isNow?' active-now':'');
+    div.innerHTML=`<div class="rem-check${isDone?' checked':''}" onclick="toggleRem('${r.id}')"></div><div class="rem-emoji">${r.emoji}</div><div class="rem-info"><div class="rem-text">${r.text}</div><div class="rem-meta">${r.section}</div></div><div class="rem-time">${fmt12(r.h,r.m)}</div>`;
+    list.appendChild(div);
+  });
+  const pct=Math.round(done/total*100);
+  const pp=document.getElementById('remPct');if(pp)pp.textContent=pct+'%';
+  const pb=document.getElementById('remProgBar');if(pb)pb.style.width=pct+'%';
+  const rd=document.getElementById('remDone');if(rd)rd.textContent=done;
+  const rl=document.getElementById('remLeft');if(rl)rl.textContent=total-done;
+  const nxt=getNext();
+  const rn=document.getElementById('remNext');if(rn)rn.textContent=nxt?fmt12(nxt.h,nxt.m):'Done!';
+}
+function toggleRem(id){
+  const key=id+'_'+new Date().toDateString();
+  if(ackedToday.has(key))ackedToday.delete(key);
+  else{ackedToday.add(key);saveAcked(key);}
+  renderReminders();updateRemBadge();
+}
+function updateRemBadge(){
+  const n=new Date();const now=n.getHours()*60+n.getMinutes();const today=n.toDateString();
+  const active=REMINDERS.filter(r=>{
+    const rMin=r.h*60+r.m;const key=r.id+'_'+today;
+    return rMin<=now&&rMin>now-60&&!ackedToday.has(key);
+  });
+  const badge=document.getElementById('remBadge');
+  if(badge){badge.style.display=active.length?'block':'none';badge.textContent=active.length;}
+}
+
+// ════ NOTIFICATIONS ════
+function sendNotif(r){
+  if(Notification.permission!=='granted')return;
+  try{const n=new Notification('⏰ ColorCast',{body:r.emoji+' '+r.text,tag:'cc-rem',requireInteraction:true});n.onclick=()=>{window.focus();n.close();};}catch(e){}
+}
+if(Notification.permission==='default')setTimeout(()=>Notification.requestPermission(),3000);
+
+// ════ BEEP ════
+function getACtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+function beep(f=880,d=120,v=0.35){try{const c=getACtx(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(v,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+d/1000);o.start(c.currentTime);o.stop(c.currentTime+d/1000);}catch(e){}}
+function startBeep(){stopBeep();beep(880,120);setTimeout(()=>beep(880,120),200);setTimeout(()=>beep(1046,180),400);beepInterval=setInterval(()=>{beep(880,120);setTimeout(()=>beep(880,120),200);setTimeout(()=>beep(1046,180),400);},4000);}
+function stopBeep(){if(beepInterval){clearInterval(beepInterval);beepInterval=null;}}
+
+// ════ RIPPLE ════
+document.addEventListener('click',function(e){
+  const card=e.target.closest('.device-card,.mr-device-card');if(!card)return;
+  const r=document.createElement('div');r.className='ripple';
+  const rect=card.getBoundingClientRect();const size=Math.max(rect.width,rect.height);
+  r.style.cssText=`width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px;position:absolute;`;
+  card.appendChild(r);setTimeout(()=>r.remove(),500);
+});
+
+// ════ PWA ════
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  const btn=document.createElement('button');
+  btn.textContent='📲 Install App';
+  btn.style.cssText='position:fixed;bottom:88px;right:16px;z-index:9998;background:var(--purple);color:#fff;border:none;border-radius:50px;padding:10px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif;box-shadow:0 4px 20px rgba(167,139,250,0.4);';
+  btn.onclick=async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();const r=await deferredPrompt.userChoice;if(r.outcome==='accepted'){btn.remove();deferredPrompt=null;}};
+  document.body.appendChild(btn);
+});
+
+// ════ INIT ════
+loadAcked();
+loadACSettings('studio');
+addLog('Studio Room Dashboard ready','s');
+setInterval(()=>{renderReminders();updateRemBadge();},10000);
+</script>
+</body>
+</html>
